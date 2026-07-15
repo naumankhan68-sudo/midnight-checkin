@@ -1,0 +1,51 @@
+name: Midnight Monday Brief
+
+on:
+  schedule:
+    # Every Monday at 9:00 AM EDT (1:00 PM UTC)
+    - cron: '0 13 * * MON'
+  workflow_dispatch:  # allow manual trigger
+
+env:
+  BOT_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+  CHAT_ID: ${{ secrets.CHAT_ID }}
+  USER_NAME: ${{ secrets.USER_NAME }}
+
+jobs:
+  monday-brief:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Monday morning brief
+        run: |
+          python3 << 'EOF'
+          import json, urllib.request, datetime, os
+
+          BOT = os.environ['BOT_TOKEN']
+          CHAT = os.environ['CHAT_ID']
+          USER = os.environ.get('USER_NAME', 'friend')
+          today = datetime.date.today()
+
+          def send_message(text):
+              payload = json.dumps({
+                  "chat_id": CHAT,
+                  "text": text,
+                  "parse_mode": "Markdown"
+              }).encode()
+              req = urllib.request.Request(
+                  f"https://api.telegram.org/bot{BOT}/sendMessage",
+                  data=payload,
+                  headers={"Content-Type": "application/json"}
+              )
+              urllib.request.urlopen(req)
+
+          # Build the weekly brief message
+          brief = (
+              f"🌙 *Good morning, {USER}!*\n\n"
+              f"Here's your weekly Midnight brief for the week of {today.strftime('%B %d')}.\n\n"
+              f"Ready to put together this week's post? Open Claude and say 'make a post' "
+              f"and I'll find the best photos, apply a preset, and write your captions. 📸"
+          )
+
+          send_message(brief)
+          print("Monday brief sent successfully")
+          EOF

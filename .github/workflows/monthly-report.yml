@@ -1,0 +1,59 @@
+name: Midnight Monthly Intelligence Report
+
+on:
+  schedule:
+    # 1st of every month at 10:00 AM EDT (2:00 PM UTC)
+    - cron: '0 14 1 * *'
+  workflow_dispatch:  # allow manual trigger
+
+env:
+  BOT_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+  CHAT_ID: ${{ secrets.CHAT_ID }}
+
+jobs:
+  monthly-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send monthly intelligence report
+        run: |
+          python3 << 'EOF'
+          import json, urllib.request, datetime, os
+
+          BOT = os.environ['BOT_TOKEN']
+          CHAT = os.environ['CHAT_ID']
+
+          today = datetime.date.today()
+
+          if today.weekday() >= 5:  # Saturday=5, Sunday=6 — no weekend messages per user preference
+              print("Today is a weekend — skipping monthly report.")
+              raise SystemExit(0)
+
+          last_month = (today.replace(day=1) - datetime.timedelta(days=1))
+          month_name = last_month.strftime('%B %Y')
+
+          def send_message(text):
+              payload = json.dumps({
+                  "chat_id": CHAT,
+                  "text": text,
+                  "parse_mode": "Markdown"
+              }).encode()
+              req = urllib.request.Request(
+                  f"https://api.telegram.org/bot{BOT}/sendMessage",
+                  data=payload,
+                  headers={"Content-Type": "application/json"}
+              )
+              urllib.request.urlopen(req)
+
+          report = (
+              f"📊 *Midnight Monthly Report*\n"
+              f"_{month_name}_\n\n"
+              f"Your monthly summary is ready! Open Claude and ask Midnight to run "
+              f"'monthly intelligence report' — it'll pull your post archive, check-in "
+              f"count, upcoming milestones, and unposted trip gems, then send the full "
+              f"report here.\n\n"
+              f"_New month, new posts. Let's make it count 🌙_"
+          )
+
+          send_message(report)
+          print("Monthly report trigger sent")
+          EOF
