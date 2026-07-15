@@ -30,6 +30,7 @@ jobs:
           CHAT_ID: ${{ secrets.CHAT_ID }}
           USER_NAME: ${{ secrets.USER_NAME }}
           PARTNER_NAME: ${{ secrets.PARTNER_NAME }}
+          CONTEXT_BRIEF: ${{ secrets.CONTEXT_BRIEF }}
         run: |
           python3 -u -c "
           import os, json, time
@@ -103,11 +104,8 @@ jobs:
                       f.write('## Midnight daily check-in FAILED\n\nBot token check failed: ' + str(e) + '\n')
               raise SystemExit(1)
 
-          # --- Load context brief (best effort, written by the local interactive agent) ---
-          context_note = ''
-          if os.path.exists('context/brief.md'):
-              with open('context/brief.md') as f:
-                  context_note = f.read().strip()
+          # --- Load context brief (best effort, set by the local interactive agent as a secret — never committed to the repo) ---
+          context_note = os.environ.get('CONTEXT_BRIEF', '').strip()
 
           # --- Load recently-asked questions (avoid repeats), keep last log line for recovery ---
           log_lines_raw = []
